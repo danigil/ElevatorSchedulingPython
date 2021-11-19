@@ -1,87 +1,86 @@
 import sys
 import json
-import re
 import csv
 
 
 class Elevator:
-    def __init__(self, id, speed, minFloor, maxFloor, closeTime, openTime, startTime, stopTime, calls):
+    def __init__(self, id, speed, min_floor, max_floor, close_time, open_time, start_time, stop_time, calls):
         self._id = id
         self._speed = speed
-        self._minFloor = minFloor
-        self._maxFloor = maxFloor
-        self._closeTime = closeTime
-        self._openTime = openTime
-        self._startTime = startTime
-        self._stopTime = stopTime
+        self._min_floor = min_floor
+        self._max_floor = max_floor
+        self._close_time = close_time
+        self._open_time = open_time
+        self._start_time = start_time
+        self._stop_time = stop_time
         self._calls = calls
 
     def get_id(self):
         return self._id
 
-    def get_calls(self):
-        return self._calls
-
     def get_speed(self):
         return self._speed
 
-    def get_closeTime(self):
-        return self._closeTime
+    def get_close_time(self):
+        return self._close_time
 
-    def get_openTime(self):
-        return self._openTime
+    def get_open_time(self):
+        return self._open_time
 
-    def get_startTime(self):
-        return self._startTime
+    def get_start_time(self):
+        return self._start_time
 
-    def get_stopTime(self):
-        return self._stopTime
+    def get_stop_time(self):
+        return self._stop_time
+
+    def get_calls(self):
+        return self._calls
 
 
 class Building:
-    def __init__(self, minFloor, maxFloor, elevators):
-        self._minFloor = minFloor
-        self._maxFloor = maxFloor
+    def __init__(self, min_floor, max_floor, elevators):
+        self._minFloor = min_floor
+        self._maxFloor = max_floor
         self._elevators = []
         for elevDict in elevators:
-            self._elevators.append(parse(elevDict))
+            self._elevators.append(parse_elev_dict(elevDict))
 
     def get_elevators(self):
         return self._elevators
 
 
 class Call:
-    def __init__(self, time, sourceFloor, destFloor, assignedTo):
+    def __init__(self, time, source_floor, dest_floor, assigned_to):
         self._time = float(time)
-        self._sourceFloor = int(sourceFloor)
-        self._destFloor = int(destFloor)
-        self._assignedTo = int(assignedTo)
-
-    def get_src(self):
-        return self._sourceFloor
+        self._source_floor = int(source_floor)
+        self._dest_floor = int(dest_floor)
+        self._assigned_to = int(assigned_to)
 
     def get_time(self):
         return self._time
 
+    def get_src(self):
+        return self._source_floor
+
     def get_dest(self):
-        return self._destFloor
+        return self._dest_floor
 
-    def set_assignedTo(self, chosenElevator):
-        self._assignedTo = chosenElevator
+    def get_assigned_to(self):
+        return self._assigned_to
 
-    def get_assignedTo(self):
-        return self._assignedTo
+    def set_assigned_to(self, chosen_elevator):
+        self._assigned_to = chosen_elevator
 
 
-def parse(elevDict):
-    elev_id = elevDict["_id"]
-    speed = elevDict["_speed"]
-    min_floor = elevDict["_minFloor"]
-    max_floor = elevDict["_maxFloor"]
-    close_time = elevDict["_closeTime"]
-    open_time = elevDict["_openTime"]
-    start_time = elevDict["_startTime"]
-    stop_time = elevDict["_stopTime"]
+def parse_elev_dict(elev_dict):
+    elev_id = elev_dict["_id"]
+    speed = elev_dict["_speed"]
+    min_floor = elev_dict["_minFloor"]
+    max_floor = elev_dict["_maxFloor"]
+    close_time = elev_dict["_closeTime"]
+    open_time = elev_dict["_openTime"]
+    start_time = elev_dict["_startTime"]
+    stop_time = elev_dict["_stopTime"]
     return Elevator(elev_id, speed, min_floor, max_floor, close_time, open_time, start_time, stop_time, [])
 
 
@@ -96,52 +95,57 @@ def read_file(file_name):
     return open(file_name, "r").read()
 
 
-def assignCalls(calls):
+def assign_calls(calls):
     for call in calls:
-        assignCall(call)
+        assign_call(call)
 
-    createFile(outName)
+    create_out_file(outName)
 
-def assignCall(call):
+
+def assign_call(call):
     min_time = sys.maxsize
     elevators = building.get_elevators()
-    chosen_elevator = elevators[0]
+    chosen_elevator = 0
     for elevator in elevators:
-        time_left=dist(call,elevator)
-        if min_time>time_left:
-            min_time=time_left
+        time_left = dist(call, elevator)
+        if min_time > time_left:
+            min_time = time_left
             chosen_elevator = elevator.get_id()
 
-    call.set_assignedTo(chosen_elevator)
+    call.set_assigned_to(chosen_elevator)
 
     for elevator in elevators:
-        if chosen_elevator== elevator.get_id():
+        if chosen_elevator == elevator.get_id():
             elevator.get_calls().append(call)
+
 
 def dist(call, elevator):
     elevator_calls = elevator.get_calls()
-    time_left=0
+    time_left = 0
+    distret = 0
+    i = 0
+    while i < len(elevator_calls):
+        distret = abs(elevator_calls[i].get_dest() - elevator_calls[i].get_src()) / elevator.get_speed() + (
+                    elevator.get_close_time() + elevator.get_open_time()) + elevator.get_start_time()+elevator.get_stop_time()
 
-    i=0
-    while(i<len(elevator_calls)):
-        distret= abs(elevator_calls[i].get_dest()-elevator_calls[i].get_src())*elevator.get_speed()+(elevator.get_closeTime() + elevator.get_openTime())
+        if i > 0 and elevator_calls[i - 1].get_dest() != elevator_calls[i].get_src():
+            distret += abs(elevator_calls[i - 1].get_dest() - elevator_calls[i].get_src()) / elevator.get_speed() + (
+                        elevator.get_close_time() + elevator.get_open_time()) + elevator.get_start_time()+elevator.get_stop_time()
 
-
-        if i>0 and elevator_calls[i-1].get_dest()!=elevator_calls[i].get_src():
-            distret+= abs(elevator_calls[i-1].get_dest()-elevator_calls[i].get_src())*elevator.get_speed()+(elevator.get_closeTime() + elevator.get_openTime())
-        else:
-            distret+=0
-
-        if (elevator_calls[i].get_time() + distret >= call.get_time()):
+        if elevator_calls[i].get_time() + distret >= call.get_time():
             time_left += distret
-        i+=1
+        i += 1
+        distret=0
 
     return time_left
 
-def createFile(fileName):
-    with open(fileName, 'w') as file:
+
+def create_out_file(file_name):
+    with open(file_name, 'w') as file:
         for elevator_call in calls:
-            file.write("Elevator call" +","+ str(elevator_call.get_time()) + "," + str(elevator_call.get_src()) +"," + str(elevator_call.get_dest()) +"," + "0" +"," + str(elevator_call.get_assignedTo()))
+            file.write(
+                "Elevator call" + "," + str(elevator_call.get_time()) + "," + str(elevator_call.get_src()) + "," + str(
+                    elevator_call.get_dest()) + "," + "0" + "," + str(elevator_call.get_assigned_to()))
             file.write("\n")
 
 
@@ -149,10 +153,8 @@ calls = []
 jsonName = sys.argv[1]
 callsName = sys.argv[2]
 parse_calls_file(callsName, calls)
-outName= sys.argv[3]
-readJson = json.loads(read_file(jsonName))
+outName = sys.argv[3]
+with open(jsonName, 'r') as file:
+    readJson = json.loads(file.read())
 building = Building(readJson["_minFloor"], readJson["_maxFloor"], readJson["_elevators"])
-assignCalls(calls)
-
-
-
+assign_calls(calls)
